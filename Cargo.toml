@@ -1,0 +1,6 @@
+[package]
+name = "particle-search"
+version = "0.1.0"
+authors = ["Atsushi Teramoto <19401881+AtsushiTeramoto@users.noreply.github.com>"]
+
+[dependencies]
