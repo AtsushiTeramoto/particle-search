@@ -25,24 +25,14 @@ impl<'a> Tree<'a> {
             Tree::Leaf {bound, particle} => {
                 let center = subdivision_center(&bound);
                 let particle_index = subdivision_index(&center, &particle.position);
-                let add_particle_index = subdivision_index(&center, &add_particle.position);
                 let mut child : [Option<Box<Tree>>; 8] = [None ,None, None, None, None, None, None, None];
                 let new_bound = subdivision_bound(&bound, &center, &particle.position);
                 child[particle_index] = Some(Box::new(Tree::Leaf {bound: new_bound, particle: particle}));
-                if particle_index != add_particle_index {
-                    let add_bound = subdivision_bound(&bound, &center, &add_particle.position);
-                    child[add_particle_index] = Some(Box::new(Tree::Leaf {bound: add_bound, particle: add_particle}));
-                    *self = Tree::Node {
-                        bound: bound,
-                        child: child,
-                    }
-                } else {
-                    *self = Tree::Node {
-                        bound: bound,
-                        child: child,
-                    };
-                    self.push(add_particle)     //can't tail call elimination.
-                }
+                *self = Tree::Node {
+                    bound: bound,
+                    child: child,
+                };
+                self.push(add_particle)     //can't tail call elimination.
             },
             Tree::Node {bound, ref mut child} => {
                 let center = subdivision_center(&bound);
