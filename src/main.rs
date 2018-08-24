@@ -48,6 +48,27 @@ impl<'a> Tree<'a> {
             },
         }
     }
+    fn search(&self, search_bound: &[(f64, f64); 3]) -> Vec<&Particle> {
+        match *self {
+            Tree::Leaf {bound: _, ref particle}
+            if search_bound[0].0 < particle.position[0] && particle.position[0] < search_bound[0].1
+            && search_bound[1].0 < particle.position[1] && particle.position[1] < search_bound[1].1
+            && search_bound[2].0 < particle.position[2] && particle.position[2] < search_bound[2].1
+            => vec![*particle],
+            Tree::Node {ref bound, ref child}
+            if bound[0].0 < search_bound[0].1 && search_bound[0].0 < bound[0].1
+            && bound[1].0 < search_bound[1].1 && search_bound[1].0 < bound[1].1
+            && bound[2].0 < search_bound[2].1 && search_bound[2].0 < bound[2].1
+            => {
+                let mut particle_list = Vec::new();
+                for child_node in child {
+                    if let Some(ref node) = child_node {particle_list.append(&mut node.as_ref().search(search_bound))};
+                }
+                particle_list
+            },
+            _ => vec![],
+        }
+    }
 }
 
 fn subdivision_center(bound: &[(f64, f64); 3]) -> [f64; 3] {
@@ -74,7 +95,7 @@ fn subdivision_bound(bound: &[(f64, f64); 3], center: &[f64; 3], position: &[f64
 
 fn main() {
     let mut particle_list = Vec::new();
-    for i in 0..16 {
+    for i in 0..1024 {
         let p = Particle {
             id: i,
             position: [rand::random(), rand::random(), rand::random()],
@@ -115,5 +136,7 @@ fn main() {
     for p in &particle_list {
         particle_tree.as_mut().push(p);
     }
-    println!("{:?}", particle_tree);
+    //println!("{:?}", particle_tree);
+    let neighbor_list = particle_tree.search(&[(0.0,0.2),(0.0,0.2),(0.0,0.2)]);
+    println!("{:?}", neighbor_list);
 }
