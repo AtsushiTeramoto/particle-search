@@ -32,7 +32,7 @@ impl<'a> Tree<'a> {
                     bound: bound,
                     child: child,
                 };
-                self.push(add_particle)     //can't tail call elimination.
+                self.push(add_particle)
             },
             Tree::Node {ref bound, ref mut child} => {
                 let center = subdivision_center(bound);
@@ -95,6 +95,19 @@ fn main() {
         if bound[1].1 < p.position[1] { bound[1].1 = p.position[1] }
         if bound[2].1 < p.position[2] { bound[2].1 = p.position[2] }
     }
+    let mut size = bound[0].1 - bound[0].0;
+    if size < bound[1].1 - bound[1].0 {size = bound[1].1 - bound[1].0};
+    if size < bound[2].1 - bound[2].0 {size = bound[2].1 - bound[2].0};
+
+    size *= 1.125;
+
+    let center = subdivision_center(&bound);
+    bound = [
+        ((center[0] - size / 2.0), (center[0] + size / 2.0)),
+        ((center[1] - size / 2.0), (center[1] + size / 2.0)),
+        ((center[2] - size / 2.0), (center[2] + size / 2.0)),
+    ];
+
     let mut particle_tree = Box::new(Tree::Node {
         bound: bound,
         child: [None, None, None, None, None, None, None, None],
