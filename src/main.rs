@@ -34,8 +34,8 @@ impl<'a> Tree<'a> {
                 };
                 self.push(add_particle)     //can't tail call elimination.
             },
-            Tree::Node {bound, ref mut child} => {
-                let center = subdivision_center(&bound);
+            Tree::Node {ref bound, ref mut child} => {
+                let center = subdivision_center(bound);
                 let add_particle_index = subdivision_index(&center, &add_particle.position);
                 if let Some(ref mut node) = child[add_particle_index] {
                     node.as_mut().push(add_particle)
@@ -45,16 +45,16 @@ impl<'a> Tree<'a> {
                         particle: add_particle,
                     }))
                 }
-            }
+            },
         }
     }
 }
 
 fn subdivision_center(bound: &[(f64, f64); 3]) -> [f64; 3] {
     [
-        (bound[0].1 - bound[0].0) / 2.0,
-        (bound[1].1 - bound[1].0) / 2.0,
-        (bound[2].1 - bound[2].0) / 2.0,
+        (bound[0].1 + bound[0].0) / 2.0,
+        (bound[1].1 + bound[1].0) / 2.0,
+        (bound[2].1 + bound[2].0) / 2.0,
     ]
 }
 
@@ -74,7 +74,7 @@ fn subdivision_bound(bound: &[(f64, f64); 3], center: &[f64; 3], position: &[f64
 
 fn main() {
     let mut particle_list = Vec::new();
-    for i in 0..4 {
+    for i in 0..16 {
         let p = Particle {
             id: i,
             position: [rand::random(), rand::random(), rand::random()],
