@@ -8,62 +8,75 @@ struct Particle {
 }
 
 #[derive(Debug)]
-enum Tree {
-    Leaf {
-        bound: [(f64, f64); 3],
-        particle: Box<Particle>,
-    },
-    Node {
-        bound: [(f64, f64); 3],
-        child: [Option<Box<Tree>>; 8],
-    },
+enum Node {
+    Node([Option<Box<Tree>>; 8]),
+    Leaf(Particle),
+}
+
+#[derive(Debug)]
+struct Tree {
+    bound: [(f64, f64); 3],
+    data: Node,
+}
+
+impl Default for Node {
+    fn default() -> Node {Node::Node(Default::default())}
+}
+
+impl Node {
+    fn new(bound: [(f64, f64); 3], index: usize, particle: Particle) -> Node {
+        let mut child: [Option<Box<Tree>>; 8] = Default::default();
+        child[index] = Some(Box::new(Tree {bound: bound, data: Node::Leaf(particle)}));
+        Node::Node(child)
+    }
 }
 
 impl Tree {
     fn new(bound: [(f64, f64); 3]) -> Tree {
-        Tree::Node {
+        Tree {
             bound: bound,
-            child: [None, None, None, None, None, None, None, None],
+            data: Default::default(),
         }
     }
-    fn push(&mut self, add_particle: Box<Particle>) {
-        match *self {
-            Tree::Leaf {bound, particle: _} => {
-                if let Tree::Leaf {bound: _, particle} = std::mem::replace(self, Tree::new(bound)) {
-                    let center = subdivision_center(&bound);
+    fn push(&mut self, add_particle: Particle) {
+        let bound = self.bound;
+        let center = subdivision_center(&bound);
+        match self.data {
+            Node::Leaf(_) => {
+                let leaf = std::mem::replace(&mut self.data, Default::default());
+                if let Node::Leaf(particle) = leaf {//必ずマッチする
                     let particle_index = subdivision_index(&center, &particle.position);
                     let new_bound = subdivision_bound(&bound, &center, &particle.position);
-                    if let Tree::Node{bound: _, ref mut child} = *self {
-                        child[particle_index] = Some(Box::new(Tree::Leaf {bound: new_bound, particle: particle}));
+                    if let Node::Node(ref mut child) = self.data {//必ずマッチする
+                        child[particle_index] = Some(Box::new(Tree {bound: new_bound, data: Node::Leaf(particle)}));
                     }
                 }
                 self.push(add_particle)
             },
-            Tree::Node {ref bound, ref mut child} => {
-                let center = subdivision_center(bound);
+            Node::Node(ref mut child) => {
                 let add_particle_index = subdivision_index(&center, &add_particle.position);
                 if let Some(ref mut node) = child[add_particle_index] {
                     node.as_mut().push(add_particle)
                 } else {
-                    child[add_particle_index] = Some(Box::new(Tree::Leaf {
+                    child[add_particle_index] = Some(Box::new(Tree {
                         bound: subdivision_bound(&bound, &center, &add_particle.position),
-                        particle: add_particle,
+                        data: Node::Leaf(add_particle),
                     }))
                 }
             },
         }
     }
     fn search(&self, search_bound: &[(f64, f64); 3]) -> Vec<&Particle> {
-        match *self {
-            Tree::Leaf {bound: _, ref particle}
+        match self.data {
+            Node::Leaf(ref particle)
             if search_bound[0].0 < particle.position[0] && particle.position[0] < search_bound[0].1
             && search_bound[1].0 < particle.position[1] && particle.position[1] < search_bound[1].1
             && search_bound[2].0 < particle.position[2] && particle.position[2] < search_bound[2].1
-            => vec![particle.as_ref()],
-            Tree::Node {ref bound, ref child}
-            if bound[0].0 < search_bound[0].1 && search_bound[0].0 < bound[0].1
-            && bound[1].0 < search_bound[1].1 && search_bound[1].0 < bound[1].1
-            && bound[2].0 < search_bound[2].1 && search_bound[2].0 < bound[2].1
+            => vec![particle],
+            Node::Node (ref child)
+            if self.bound[0].0 < search_bound[0].1 && search_bound[0].0 < self.bound[0].1
+            && self.bound[1].0 < search_bound[1].1 && search_bound[1].0 < self.bound[1].1
+            && self.bound[2].0 < search_bound[2].1 && search_bound[2].0 < self.bound[2].1
             => {
                 let mut particle_list = Vec::new();
                 for child_node in child {
@@ -134,12 +147,9 @@ fn main() {
         ((center[2] - size / 2.0), (center[2] + size / 2.0)),
     ];
 
-    let mut particle_tree = Box::new(Tree::Node {
-        bound: bound,
-        child: [None, None, None, None, None, None, None, None],
-    });
+    let mut particle_tree = Tree::new(bound);
     for p in particle_list {
-        particle_tree.as_mut().push(Box::new(p));
+        particle_tree.push(p);
     }
     //println!("{:?}", particle_tree);
     let neighbor_list = particle_tree.search(&[(0.0,0.2),(0.0,0.2),(0.0,0.2)]);
