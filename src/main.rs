@@ -8,30 +8,35 @@ struct Particle {
 }
 
 #[derive(Debug)]
-enum Tree<'a> {
+enum Tree {
     Leaf {
         bound: [(f64, f64); 3],
-        particle: &'a Particle,
+        particle: Box<Particle>,
     },
     Node {
         bound: [(f64, f64); 3],
-        child: [Option<Box<Tree<'a>>>; 8],
+        child: [Option<Box<Tree>>; 8],
     },
 }
 
-impl<'a> Tree<'a> {
-    fn push(&mut self, add_particle : &'a Particle) {
+impl Tree {
+    fn new(bound: [(f64, f64); 3]) -> Tree {
+        Tree::Node {
+            bound: bound,
+            child: [None, None, None, None, None, None, None, None],
+        }
+    }
+    fn push(&mut self, add_particle: Box<Particle>) {
         match *self {
-            Tree::Leaf {bound, particle} => {
-                let center = subdivision_center(&bound);
-                let particle_index = subdivision_index(&center, &particle.position);
-                let mut child : [Option<Box<Tree>>; 8] = [None ,None, None, None, None, None, None, None];
-                let new_bound = subdivision_bound(&bound, &center, &particle.position);
-                child[particle_index] = Some(Box::new(Tree::Leaf {bound: new_bound, particle: particle}));
-                *self = Tree::Node {
-                    bound: bound,
-                    child: child,
-                };
+            Tree::Leaf {bound, particle: _} => {
+                if let Tree::Leaf {bound: _, particle} = std::mem::replace(self, Tree::new(bound)) {
+                    let center = subdivision_center(&bound);
+                    let particle_index = subdivision_index(&center, &particle.position);
+                    let new_bound = subdivision_bound(&bound, &center, &particle.position);
+                    if let Tree::Node{bound: _, ref mut child} = *self {
+                        child[particle_index] = Some(Box::new(Tree::Leaf {bound: new_bound, particle: particle}));
+                    }
+                }
                 self.push(add_particle)
             },
             Tree::Node {ref bound, ref mut child} => {
@@ -54,7 +59,7 @@ impl<'a> Tree<'a> {
             if search_bound[0].0 < particle.position[0] && particle.position[0] < search_bound[0].1
             && search_bound[1].0 < particle.position[1] && particle.position[1] < search_bound[1].1
             && search_bound[2].0 < particle.position[2] && particle.position[2] < search_bound[2].1
-            => vec![*particle],
+            => vec![particle.as_ref()],
             Tree::Node {ref bound, ref child}
             if bound[0].0 < search_bound[0].1 && search_bound[0].0 < bound[0].1
             && bound[1].0 < search_bound[1].1 && search_bound[1].0 < bound[1].1
@@ -133,8 +138,8 @@ fn main() {
         bound: bound,
         child: [None, None, None, None, None, None, None, None],
     });
-    for p in &particle_list {
-        particle_tree.as_mut().push(p);
+    for p in particle_list {
+        particle_tree.as_mut().push(Box::new(p));
     }
     //println!("{:?}", particle_tree);
     let neighbor_list = particle_tree.search(&[(0.0,0.2),(0.0,0.2),(0.0,0.2)]);
