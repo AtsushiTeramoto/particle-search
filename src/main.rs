@@ -88,14 +88,15 @@ impl Tree {
         let center = bound.subdivision_center();
         match self.data {
             Node::Leaf(_) => {
-                let leaf = std::mem::replace(&mut self.data, Default::default());
-                if let Node::Leaf(particle) = leaf {//必ずマッチする
-                    let particle_index = subdivision_index(&center, &particle.position);
-                    let new_bound = bound.subdivision_bound(&center, &particle.position);
-                    if let Node::Node(ref mut child) = self.data {//必ずマッチする
-                        child[particle_index] = Some(Box::new(Tree {bound: new_bound, data: Node::Leaf(particle)}));
-                    }
-                }
+                let (particle_index, new_bound) = if let Node::Leaf(ref particle) = self.data {
+                    (subdivision_index(&center, &particle.position),
+                    bound.subdivision_bound(&center, &particle.position))
+                } else {unreachable!()};
+                self.data = Node::Node({
+                    let mut child:[Option<Box<Tree>>; 8] = Default::default();
+                    child[particle_index] = Some(Box::new(Tree {bound: new_bound, data: std::mem::replace(&mut self.data, Default::default())}));
+                    child
+                });
                 self.push(add_particle)
             },
             Node::Node(ref mut child) => {
