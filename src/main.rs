@@ -66,23 +66,6 @@ enum Node {
     Leaf(Particle),
 }
 
-impl Node {
-    fn expect_leaf(&self) -> &Particle {
-        if let Node::Leaf(ref particle) = self {
-            particle
-        } else {
-            unreachable!()
-        }
-    }
-    fn expect_node(&mut self) -> &mut [Option<Box<Tree>>; 8] {
-        if let Node::Node(ref mut child) = self {
-            child
-        } else {
-            unreachable!()
-        }
-    }
-}
-
 #[derive(Debug)]
 struct Tree {
     bound: Bound,
@@ -106,11 +89,13 @@ impl Tree {
         match self.data {
             Node::Leaf(_) => {
                 let leaf = std::mem::replace(&mut self.data, Default::default());
-                let (new_bound, particle_index) = {
-                    let particle = leaf.expect_leaf();
-                    (bound.subdivision_bound(&center, &particle.position), subdivision_index(&center, &particle.position))
-                };
-                self.data.expect_node()[particle_index] = Some(Box::new(Tree {bound: new_bound, data: leaf}));
+                if let Node::Leaf(particle) = leaf {//必ずマッチする
+                    let particle_index = subdivision_index(&center, &particle.position);
+                    let new_bound = bound.subdivision_bound(&center, &particle.position);
+                    if let Node::Node(ref mut child) = self.data {//必ずマッチする
+                        child[particle_index] = Some(Box::new(Tree {bound: new_bound, data: Node::Leaf(particle)}));
+                    }
+                }
                 self.push(add_particle)
             },
             Node::Node(ref mut child) => {
