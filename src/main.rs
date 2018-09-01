@@ -19,28 +19,45 @@ impl Mul<f64> for Vec3 {
     }
 }
 
-impl Vec3 {
-    fn lt(&self, other: &Vec3) -> bool {
-        self.0 < other.0 &&
-        self.1 < other.1 &&
-        self.2 < other.2
-    }
-    fn le(&self, other: &Vec3) -> bool {
-        self.0 <= other.0 &&
-        self.1 <= other.1 &&
-        self.2 <= other.2
-    }
-}
-
 #[derive(Debug, Copy, Clone)]
 struct Bound(Vec3, Vec3);
 
 impl Bound {
     fn is_in_bound(&self, pos: &Vec3) -> bool {
-        (self.0).lt(pos) && pos.le(&self.1)
+        let x_cond = if (self.0).0 <= (self.1).0 {
+            (self.0).0 <= pos.0 && pos.0 < (self.1).0
+        } else {
+            (self.0).0 <= pos.0 || pos.0 < (self.1).0
+        };
+        let y_cond = if (self.0).1 <= (self.1).1 {
+            (self.0).1 <= pos.1 && pos.1 < (self.1).1
+        } else {
+            (self.0).1 <= pos.1 || pos.1 < (self.1).1
+        };
+        let z_cond = if (self.0).2 <= (self.1).2 {
+            (self.0).2 <= pos.2 && pos.2 < (self.1).2
+        } else {
+            (self.0).2 <= pos.2 || pos.2 < (self.1).2
+        };
+        x_cond && y_cond && z_cond
     }
     fn is_overlap(&self, other: &Bound) -> bool {
-        (self.0).lt(&other.1) && (other.0).le(&self.1)
+        let x_cond = if (other.0).0 <= (other.1).0 {
+            (other.0).0 < (self.1).0 && (self.0).0 < (other.1).0
+        } else {
+            (other.0).0 < (self.1).0 || (self.0).0 < (other.1).0
+        };
+        let y_cond = if (other.0).1 <= (other.1).1 {
+            (other.0).1 < (self.1).1 && (self.0).1 < (other.1).1
+        } else {
+            (other.0).1 < (self.1).1 || (self.0).1 < (other.1).1
+        };
+        let z_cond = if (other.0).2 <= (other.1).2 {
+            (other.0).2 < (self.1).2 && (self.0).2 < (other.1).2
+        } else {
+            (other.0).2 < (self.1).2 || (self.0).2 < (other.1).2
+        };
+        x_cond && y_cond && z_cond
     }
     fn subdivision_center(&self) -> Vec3 {
         (self.0 + self.1)*0.5
@@ -173,6 +190,6 @@ fn main() {
         particle_tree.push(p);
     }
     //println!("{:?}", particle_tree);
-    let neighbor_list = particle_tree.search(&Bound(Vec3(0.0,0.0,0.0),Vec3(0.2,0.2,0.2)));
+    let neighbor_list = particle_tree.search(&Bound(Vec3(0.9,0.9,0.9),Vec3(0.1,0.1,0.1)));
     println!("{:?}", neighbor_list);
 }
